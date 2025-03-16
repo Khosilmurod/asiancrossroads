@@ -98,10 +98,9 @@ class IncomingEmail(models.Model):
     approved_at = models.DateTimeField(null=True, blank=True)
     sent_at = models.DateTimeField(null=True, blank=True)
     
-    # New fields for attachments and links
+    # Fields for attachments
     has_attachments = models.BooleanField(default=False)
     attachments = models.JSONField(default=list, blank=True)  # Store attachment metadata
-    extracted_links = models.JSONField(default=list, blank=True)  # Store links from email
     
     class Meta:
         ordering = ['-received_at']

@@ -66,7 +66,7 @@ def get_logo_html(mode="cid"):
         return ""
 
 def add_logo_to_html(html_content, mode="datauri"):
-    """Add logo to HTML content."""
+    """Add logo to HTML content and ensure it's all styled with Merriweather."""
     logo_html = get_logo_html(mode)
     if not logo_html:
         return html_content
@@ -79,7 +79,16 @@ def add_logo_to_html(html_content, mode="datauri"):
             </div>
         '''
     else:
-        # Add style to existing HTML content by wrapping it in a container
+        # Clean up any existing styles and wrap HTML content
+        # Remove any existing font-family styles
+        html_content = re.sub(r'font-family\s*:[^;"]+;?', '', html_content, flags=re.IGNORECASE)
+        # Remove font tags
+        html_content = re.sub(r'</?font[^>]*>', '', html_content, flags=re.IGNORECASE)
+        # Remove face attributes
+        html_content = re.sub(r'\sface="[^"]*"', '', html_content, flags=re.IGNORECASE)
+        # Remove style tags
+        html_content = re.sub(r'<style[^>]*>.*?</style>', '', html_content, flags=re.IGNORECASE | re.DOTALL)
+        # Wrap in container
         html_content = f'<div class="ac-email-content-html">{html_content}</div>'
     
     # Remove any existing logo if present
@@ -110,56 +119,62 @@ def add_logo_to_html(html_content, mode="datauri"):
                 <meta name="format-detection" content="telephone=no">
                 <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
                 <style>
-                    /* Reset styles for email container */
-                    .ac-email-wrapper {{
-                        all: initial;
-                        font-family: system-ui, -apple-system, sans-serif;
+                    /* Reset all inherited styles */
+                    * {{
+                        margin: 0;
+                        padding: 0;
+                        font-family: 'Merriweather', Georgia, serif !important;
+                        line-height: 1.6 !important;
+                        color: #1f2937 !important;
                     }}
                     
                     /* Main container styles */
                     .ac-email-container {{
-                        margin: 0;
-                        padding: 0;
-                        word-spacing: normal;
+                        max-width: 800px;
+                        margin: 0 auto;
+                        padding: 20px;
                         background-color: #ffffff;
-                        font-family: system-ui, -apple-system, sans-serif;
-                        color: #333333;
-                        line-height: 1.4;
                     }}
                     
                     /* Content text styles */
                     .ac-email-content-text {{
                         white-space: pre-wrap;
-                        line-height: 1.6;
                         margin-bottom: 1em;
-                        font-family: 'Merriweather', Georgia, serif;
-                        color: #333333;
                     }}
                     
                     /* HTML content styles */
                     .ac-email-content-html {{
-                        line-height: 1.6;
-                        font-family: 'Merriweather', Georgia, serif;
-                        color: #333333;
+                        margin-bottom: 1em;
                     }}
                     
                     /* Override any existing styles */
-                    .ac-email-content-html p,
-                    .ac-email-content-html div {{
-                        margin-bottom: 1em;
-                        line-height: 1.6;
+                    p, div, span, a, li, td, th, h1, h2, h3, h4, h5, h6 {{
                         font-family: 'Merriweather', Georgia, serif !important;
-                        color: #333333 !important;
-                        background: transparent !important;
+                        line-height: 1.6 !important;
+                        color: #1f2937 !important;
                     }}
                     
-                    /* Main content area */
-                    .ac-email-content {{
-                        font-size: 16px;
-                        color: #333333;
-                        text-align: left;
-                        padding: 0 20px;
-                        font-family: 'Merriweather', Georgia, serif;
+                    /* Specific heading styles */
+                    h1, h2, h3, h4, h5, h6 {{
+                        margin-bottom: 0.5em;
+                        line-height: 1.4 !important;
+                    }}
+                    
+                    /* Paragraph spacing */
+                    p {{
+                        margin-bottom: 1em;
+                    }}
+                    
+                    /* List styles */
+                    ul, ol {{
+                        margin-bottom: 1em;
+                        padding-left: 2em;
+                    }}
+                    
+                    /* Link styles */
+                    a {{
+                        color: #2563eb !important;
+                        text-decoration: underline;
                     }}
                     
                     /* Logo container */
@@ -178,32 +193,15 @@ def add_logo_to_html(html_content, mode="datauri"):
                 </style>
             </head>
             <body>
-                <div class="ac-email-wrapper">
-                    <div class="ac-email-container" role="article" aria-roledescription="email" lang="en">
-                        <table role="presentation" style="width:100%;border:none;border-spacing:0;border-collapse:collapse;">
-                            <tr>
-                                <td align="center" style="padding:0;">
-                                    <div style="width:100%;max-width:800px;margin:0 auto;padding:20px;">
-                                        <div class="ac-email-logo">
-                                            {logo_html}
-                                        </div>
-                                        <div class="ac-email-content">
-                                            {html_content}
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
+                <div class="ac-email-container">
+                    <div class="ac-email-logo">
+                        {logo_html}
                     </div>
+                    {html_content}
                 </div>
             </body>
         </html>
     '''
-
-def extract_links_from_text(text):
-    """Extract URLs from text content."""
-    url_pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
-    return list(set(re.findall(url_pattern, text)))
 
 def get_attachment_metadata(part, message_id):
     """Extract attachment metadata from message part."""
@@ -356,6 +354,7 @@ def check_new_emails():
                         decoded_html = base64.urlsafe_b64decode(
                             payload['body']['data']
                         ).decode('utf-8')
+                        
                         # Remove any existing logo if present
                         decoded_html = re.sub(
                             r'<div[^>]*>\s*<img[^>]*alt="Asian Crossroads Logo"[^>]*>\s*</div>',
@@ -363,6 +362,12 @@ def check_new_emails():
                             decoded_html,
                             flags=re.IGNORECASE
                         )
+
+                        # Remove any inline font-family styles, <font> tags, and face="..." attributes
+                        decoded_html = re.sub(r'font-family\s*:[^;"]+;?', '', decoded_html, flags=re.IGNORECASE)
+                        decoded_html = re.sub(r'\sface="[^"]*"', '', decoded_html, flags=re.IGNORECASE)
+                        decoded_html = re.sub(r'</?font[^>]*>', '', decoded_html, flags=re.IGNORECASE)
+                        
                         html_content = decoded_html
                 
                 # Handle attachment in the current part
@@ -390,19 +395,13 @@ def check_new_emails():
                 content = re.sub(r'\n{3,}', '\n\n', content)
                 content = content.strip()
             
-            # Create HTML version with logo and styling
+            # Create HTML version with logo and styling (all Merriweather)
             final_html = add_logo_to_html(
                 html_content if html_content else content,
                 mode="datauri"
             )
             
-            # Extract links from content
-            extracted_links = extract_links_from_text(content)
-            if html_content:
-                extracted_links.extend(extract_links_from_text(html_content))
-            extracted_links = list(set(extracted_links))
-            
-            print(f"Found {len(attachments)} attachments and {len(extracted_links)} links")
+            print(f"Found {len(attachments)} attachments")
             
             # Store email for approval
             try:
@@ -413,8 +412,7 @@ def check_new_emails():
                     html_content=final_html,
                     original_email_id=message['id'],
                     has_attachments=bool(attachments),
-                    attachments=attachments,
-                    extracted_links=extracted_links
+                    attachments=attachments
                 )
                 
                 # Mark email as read
