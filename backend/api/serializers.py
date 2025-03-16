@@ -77,9 +77,11 @@ class IncomingEmailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'sender_email', 'subject', 'content', 'html_content',
             'received_at', 'status', 'status_display', 'approved_by',
-            'approved_by_name', 'approved_at', 'sent_at'
+            'approved_by_name', 'approved_at', 'sent_at', 'has_attachments',
+            'attachments', 'extracted_links'
         ]
         read_only_fields = [
             'sender_email', 'subject', 'content', 'html_content',
-            'received_at', 'approved_by', 'approved_at', 'sent_at'
+            'received_at', 'approved_by', 'approved_at', 'sent_at',
+            'has_attachments', 'attachments', 'extracted_links'
         ]

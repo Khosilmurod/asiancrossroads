@@ -63,7 +63,7 @@ export const Navigation = () => {
                   <NavLink to="/subscribers">Subscribers</NavLink>
                 )}
                 {(user.role === 'ADMIN' || user.role === 'PRESIDENT') && (
-                  <NavLink to="/emails">Email Approval</NavLink>
+                  <NavLink to="/emails">Emails</NavLink>
                 )}
                 <NavLink to="/profile">Profile</NavLink>
                 <button
