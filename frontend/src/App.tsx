@@ -51,7 +51,7 @@ const App = () => {
       <AuthProvider>
         <div className="min-h-screen flex flex-col bg-white">
           <Navigation />
-          <main className="flex-grow pt-16">
+          <main className="flex-grow pt-[72px]">
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />

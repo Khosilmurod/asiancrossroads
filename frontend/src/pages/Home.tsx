@@ -129,7 +129,7 @@ export const Home = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3, duration: 0.6 }}
-                className="bg-black/25 py-12 backdrop-blur-sm w-screen"
+                className="bg-black/25 py-12 w-screen"
               >
                 <div className="flex flex-col items-center gap-12 max-w-6xl mx-auto">
                   <div className="flex items-center gap-8">
@@ -204,7 +204,7 @@ export const Home = () => {
               <h2 className="text-3xl font-bold">Upcoming Events</h2>
               <Link 
                 to="/events"
-                className="text-sm font-medium text-[#004aab] hover:text-[#003d8f] transition-colors"
+                className="text-sm font-medium text-black hover:text-gray-600 transition-colors"
               >
                 View all events →
               </Link>
