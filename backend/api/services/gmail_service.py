@@ -5,6 +5,7 @@ import re
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
+from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email import encoders
 from google.oauth2.credentials import Credentials
@@ -15,9 +16,111 @@ from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from ..models import IncomingEmail, MailingListSubscriber
+import pathlib
 
 User = get_user_model()
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
+
+# Create assets directory if it doesn't exist
+ASSETS_DIR = os.path.join(settings.BASE_DIR, 'assets')
+os.makedirs(ASSETS_DIR, exist_ok=True)
+
+def get_logo_html(mode="cid"):
+    """Get the HTML for the logo.
+    
+    mode="cid": Returns an <img> tag referencing the logo via a Content-ID.
+    mode="datauri": Returns an <img> tag with a data URI (Base64) so the file is self-contained.
+    """
+    logo_path = os.path.join(settings.BASE_DIR, 'assets', 'logo.png')
+    
+    if not os.path.exists(logo_path):
+        print(f"Logo file not found at {logo_path}")
+        return ""
+        
+    if mode == "cid":
+        # Reference the logo using a content ID
+        return '''
+            <div style="text-align: center; padding: 20px 0;">
+                <img src="cid:logo@asiancrossroads" 
+                     alt="Asian Crossroads Logo" 
+                     style="width: 200px; height: auto; display: block; margin: 0 auto;"
+                     width="200">
+            </div>
+        '''
+    elif mode == "datauri":
+        try:
+            with open(logo_path, 'rb') as f:
+                logo_data = base64.b64encode(f.read()).decode('utf-8')
+                return f'''
+                    <div style="text-align: center; padding: 20px 0;">
+                        <img src="data:image/png;base64,{logo_data}" 
+                             alt="Asian Crossroads Logo" 
+                             style="width: 200px; height: auto; display: block; margin: 0 auto;"
+                             width="200">
+                    </div>
+                '''
+        except Exception as e:
+            print(f"Error reading logo: {str(e)}")
+            return ""
+    else:
+        return ""
+
+def add_logo_to_html(html_content, mode="datauri"):
+    """Add logo to HTML content."""
+    logo_html = get_logo_html(mode)
+    if not logo_html:
+        return html_content
+        
+    # If the content is just plain text, wrap it in a div
+    if not html_content.strip().startswith('<'):
+        html_content = f'<div style="white-space:pre-wrap;">{html_content}</div>'
+    
+    # Remove any existing logo if present
+    html_content = re.sub(
+        r'<div[^>]*>\s*<img[^>]*alt="Asian Crossroads Logo"[^>]*>\s*</div>',
+        '',
+        html_content,
+        flags=re.IGNORECASE
+    )
+    
+    # Remove any existing DOCTYPE, html, head, and body tags
+    html_content = re.sub(
+        r'<!DOCTYPE[^>]*>|</?html[^>]*>|</?head[^>]*>|</?body[^>]*>',
+        '',
+        html_content,
+        flags=re.IGNORECASE
+    )
+    
+    # Create a complete HTML structure with the logo at the top
+    return f'''
+        <!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <meta name="color-scheme" content="light">
+                <meta name="supported-color-schemes" content="light">
+                <meta name="format-detection" content="telephone=no">
+                <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
+            </head>
+            <body style="margin:0;padding:0;word-spacing:normal;background-color:#ffffff;font-family:'Merriweather',Georgia,serif;">
+                <div role="article" aria-roledescription="email" lang="en" style="text-size-adjust:100%;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;background-color:#ffffff;">
+                    <table role="presentation" style="width:100%;border:none;border-spacing:0;border-collapse:collapse;">
+                        <tr>
+                            <td align="center" style="padding:0;">
+                                <div style="width:100%;max-width:800px;margin:0 auto;padding:20px;">
+                                    {logo_html}
+                                    <div style="font-family:'Merriweather',Georgia,serif;font-size:16px;line-height:1.6;color:#333333;text-align:left;padding:0 20px;">
+                                        {html_content}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </body>
+        </html>
+    '''
 
 def extract_links_from_text(text):
     """Extract URLs from text content."""
@@ -172,9 +275,17 @@ def check_new_emails():
                             payload['body']['data']
                         ).decode('utf-8')
                     elif payload['mimeType'] == 'text/html':
-                        html_content = base64.urlsafe_b64decode(
+                        decoded_html = base64.urlsafe_b64decode(
                             payload['body']['data']
                         ).decode('utf-8')
+                        # Remove any existing logo if present
+                        decoded_html = re.sub(
+                            r'<div[^>]*>\s*<img[^>]*alt="Asian Crossroads Logo"[^>]*>\s*</div>',
+                            '',
+                            decoded_html,
+                            flags=re.IGNORECASE
+                        )
+                        html_content = decoded_html
                 
                 # Handle attachment in the current part
                 if ('filename' in payload and payload['filename']) or ('name' in payload and payload['name']):
@@ -193,9 +304,19 @@ def check_new_emails():
             
             # If no plain text content but have HTML, create a plain text version
             if not content and html_content:
-                content = html_content.replace('<br>', '\n').replace('</div>', '\n')
-                # Remove all other HTML tags
+                # Convert HTML to plain text
+                content = re.sub(r'<br\s*/?>', '\n', html_content)
+                content = re.sub(r'</div>\s*<div[^>]*>', '\n\n', content)
+                content = re.sub(r'</p>\s*<p[^>]*>', '\n\n', content)
                 content = re.sub(r'<[^>]+>', '', content)
+                content = re.sub(r'\n{3,}', '\n\n', content)
+                content = content.strip()
+            
+            # Create HTML version with logo
+            final_html = add_logo_to_html(
+                html_content if html_content else f'<div style="white-space:pre-wrap;">{content}</div>',
+                mode="datauri"
+            )
             
             # Extract links from content
             extracted_links = extract_links_from_text(content)
@@ -211,7 +332,7 @@ def check_new_emails():
                     sender_email=sender_email,
                     subject=subject,
                     content=content,
-                    html_content=html_content,
+                    html_content=final_html,
                     original_email_id=message['id'],
                     has_attachments=bool(attachments),
                     attachments=attachments,
@@ -236,31 +357,93 @@ def check_new_emails():
 
 def send_approved_email(email_id):
     """Send approved email to all subscribers."""
+    print(f"\n=== Starting to send approved email {email_id} ===")
     service = get_gmail_service()
-    email = IncomingEmail.objects.get(id=email_id)
-    subscribers = MailingListSubscriber.objects.filter(is_active=True)
+    try:
+        email = IncomingEmail.objects.get(id=email_id)
+        print(f"Found email: subject='{email.subject}', from={email.sender_email}")
+    except IncomingEmail.DoesNotExist:
+        print(f"Error: Email with ID {email_id} not found")
+        raise
     
     try:
-        for subscriber in subscribers:
+        subscribers = MailingListSubscriber.objects.filter(is_active=True)
+        subscriber_count = subscribers.count()
+        print(f"Found {subscriber_count} active subscribers")
+        if subscriber_count == 0:
+            print("Warning: No active subscribers found!")
+            return
+    except Exception as e:
+        print(f"Error getting subscribers: {str(e)}")
+        raise
+    
+    # Prepare cleaned HTML content (remove any previous logo and wrapping tags)
+    if email.html_content:
+        cleaned_html = re.sub(
+            r'<div[^>]*>\s*<img[^>]*alt="Asian Crossroads Logo"[^>]*>\s*</div>',
+            '',
+            email.html_content,
+            flags=re.IGNORECASE
+        )
+        cleaned_html = re.sub(
+            r'<!DOCTYPE[^>]*>|</?html[^>]*>|</?head[^>]*>|</?body[^>]*>',
+            '',
+            cleaned_html,
+            flags=re.IGNORECASE
+        )
+    else:
+        cleaned_html = f'<div style="white-space:pre-wrap;">{email.content}</div>'
+    
+    # Loop through subscribers and send the email with inline logo using CID
+    for subscriber in subscribers:
+        print(f"\n--- Processing subscriber: {subscriber.email} ---")
+        try:
             message = MIMEMultipart('mixed')
             message['Subject'] = email.subject
             message['From'] = 'Asian Crossroads <asiancrossroads@gmail.com>'
             message['To'] = subscriber.email
+            message['X-Auto-Response-Suppress'] = 'OOF, AutoReply'
+            message['Precedence'] = 'bulk'
+            message['X-Priority'] = '3'
+            message['X-MSMail-Priority'] = 'Normal'
             
-            # Create the HTML/plain-text part
+            # Create the HTML/plain-text alternative part
             alt_part = MIMEMultipart('alternative')
             
-            # Add plain text and HTML parts
-            text_part = MIMEText(email.content, 'plain', 'utf-8')
+            # Add plain text part
+            print("Adding plain text content...")
+            text_content = email.content
+            if email.html_content:
+                text_content = re.sub(r'<br\s*/?>', '\n', email.html_content)
+                text_content = re.sub(r'</div>\s*<div[^>]*>', '\n\n', text_content)
+                text_content = re.sub(r'</p>\s*<p[^>]*>', '\n\n', text_content)
+                text_content = re.sub(r'<[^>]+>', '', text_content)
+                text_content = re.sub(r'\n{3,}', '\n\n', text_content)
+                text_content = text_content.strip()
+            
+            text_part = MIMEText(text_content, 'plain', 'utf-8')
             alt_part.attach(text_part)
             
-            if email.html_content:
-                html_part = MIMEText(email.html_content, 'html', 'utf-8')
-                alt_part.attach(html_part)
-                
+            # Create HTML content with inline logo using CID reference
+            print("Creating HTML content with logo...")
+            full_html = add_logo_to_html(cleaned_html, mode="cid")
+            html_part = MIMEText(full_html, 'html', 'utf-8')
+            alt_part.attach(html_part)
             message.attach(alt_part)
             
-            # Add attachments if any
+            # Attach the logo image as an inline attachment for CID reference
+            try:
+                logo_path = os.path.join(settings.BASE_DIR, 'assets', 'logo.png')
+                with open(logo_path, 'rb') as f:
+                    logo_data = f.read()
+                logo_img = MIMEImage(logo_data, _subtype="png")
+                logo_img.add_header('Content-ID', '<logo@asiancrossroads>')
+                logo_img.add_header('Content-Disposition', 'inline', filename="logo.png")
+                message.attach(logo_img)
+            except Exception as e:
+                print(f"Error attaching inline logo: {str(e)}")
+            
+            # Add additional attachments if any
             if email.has_attachments and email.attachments:
                 print(f"Processing {len(email.attachments)} attachments")
                 for attachment_meta in email.attachments:
@@ -268,7 +451,6 @@ def send_approved_email(email_id):
                         print(f"Processing attachment: {attachment_meta['filename']}")
                         # Get attachment data from Gmail API
                         attachment_id = attachment_meta['attachment_id']
-                        # The attachment ID is everything after the message ID
                         message_id_length = len(email.original_email_id) + 1  # +1 for the underscore
                         attachment_id_only = attachment_meta['attachment_id'][message_id_length:]
                         
@@ -285,13 +467,11 @@ def send_approved_email(email_id):
                             file_data = base64.urlsafe_b64decode(attachment['data'])
                             print(f"Successfully retrieved attachment data, size: {len(file_data)} bytes")
                             
-                            # Create attachment part
                             main_type, sub_type = attachment_meta['content_type'].split('/', 1)
                             att_part = MIMEBase(main_type, sub_type)
                             att_part.set_payload(file_data)
                             encoders.encode_base64(att_part)
                             
-                            # Add header
                             att_part.add_header(
                                 'Content-Disposition',
                                 'attachment',
@@ -299,28 +479,51 @@ def send_approved_email(email_id):
                             )
                             message.attach(att_part)
                             print(f"Successfully attached {attachment_meta['filename']}")
+                        else:
+                            print(f"Warning: No data found in attachment response for {attachment_meta['filename']}")
                     except Exception as e:
                         print(f"Error attaching file {attachment_meta['filename']}: {str(e)}")
                         continue
             
-            raw_message = base64.urlsafe_b64encode(
-                message.as_bytes()
-            ).decode('utf-8')
-            
+            print("Encoding message...")
             try:
-                service.users().messages().send(
+                raw_message = base64.urlsafe_b64encode(
+                    message.as_bytes()
+                ).decode('utf-8')
+            except Exception as e:
+                print(f"Error encoding message: {str(e)}")
+                raise
+            
+            print("Sending message...")
+            try:
+                result = service.users().messages().send(
                     userId='me',
                     body={'raw': raw_message}
                 ).execute()
-                print(f"Successfully sent email to {subscriber.email}")
+                print(f"Successfully sent email to {subscriber.email} (Message ID: {result.get('id')})")
             except Exception as e:
-                print(f"Error sending email to {subscriber.email}: {str(e)}")
+                print(f"Error from Gmail API while sending to {subscriber.email}: {str(e)}")
                 continue
-        
-        # Update email status
-        email.sent_at = timezone.now()
-        email.save()
-        
+            
+        except Exception as e:
+            print(f"Error processing subscriber {subscriber.email}: {str(e)}")
+            continue
+    
+    # Save the fully styled HTML email to a file with inline styles (using data URI for logo)
+    try:
+        final_html_save = add_logo_to_html(cleaned_html, mode="datauri")
+        saved_emails_dir = os.path.join(settings.BASE_DIR, 'saved_emails')
+        os.makedirs(saved_emails_dir, exist_ok=True)
+        filename = f"email_{email.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.html"
+        file_path = os.path.join(saved_emails_dir, filename)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(final_html_save)
+        print(f"Email HTML saved to {file_path}")
     except Exception as e:
-        print(f"Error sending email: {str(e)}")
-        raise 
+        print(f"Error saving email HTML file: {str(e)}")
+    
+    # Update email status
+    print("\nUpdating email status...")
+    email.sent_at = timezone.now()
+    email.save()
+    print("=== Email sending process completed ===\n")
