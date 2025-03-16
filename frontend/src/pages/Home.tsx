@@ -3,6 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { upcomingEvents } from '../utils/data';
 import { TeamSection } from '../components/TeamSection';
+import { Button } from '../components/common/Button';
+import { Input } from '../components/common/Input';
+import { Alert } from '../components/common/Alert';
+import { colors } from '../styles/tokens';
 import axios from '../utils/axios';
 
 export const Home = () => {
@@ -146,14 +150,13 @@ export const Home = () => {
                     </div>
                   </div>
                   <div className="w-full max-w-2xl flex flex-col items-center gap-8">
-                    <button
+                    <Button
                       onClick={() => {
                         document.getElementById('mailing-list')?.scrollIntoView({ behavior: 'smooth' });
                       }}
-                      className="bg-[#2563EB] text-white px-5 py-2 rounded-[3px] text-[15px] font-medium hover:bg-[#1d4ed8] transition-colors"
                     >
                       Join Mailing List
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </motion.div>
@@ -163,24 +166,15 @@ export const Home = () => {
       </section>
 
       {/* About Section */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="container-padded">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
-            <div>
-              <h2 className="text-3xl font-bold">About Us</h2>
-              <p className="mt-6 text-gray-600 leading-relaxed">
-                Asian Crossroads brings together students passionate about Central Asian culture, 
-                history, and contemporary issues. Through our events and initiatives, we create 
-                spaces for meaningful cultural exchange and learning.
-              </p>
-            </div>
-            <div className="relative h-[400px] rounded-lg overflow-hidden">
-              <img 
-                src="/nomad.jpg" 
-                alt="Traditional Central Asian Carpet" 
-                className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
-              />
-            </div>
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-4xl font-bold text-gray-900 mb-8">About Us</h2>
+            <p className="text-lg text-gray-600 leading-relaxed">
+              Asian Crossroads brings together students passionate about Central Asian culture, 
+              history, and contemporary issues. Through our events and initiatives, we create 
+              spaces for meaningful cultural exchange and learning.
+            </p>
           </div>
         </div>
       </section>
@@ -350,14 +344,14 @@ export const Home = () => {
       <TeamSection />
 
       {/* Mailing List Section */}
-      <section id="mailing-list" className="py-20 bg-[#004aab] text-white">
+      <section id="mailing-list" className="py-24 bg-[#004aab] text-white">
         <div className="container-padded">
           <div className="max-w-3xl mx-auto text-center">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-3xl font-bold mb-4"
+              className="text-4xl font-bold text-white mb-4"
             >
               Stay Connected
             </motion.h2>
@@ -366,7 +360,7 @@ export const Home = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="text-lg text-white/90 mb-8"
+              className="text-lg text-white/90 mb-12"
             >
               Join our mailing list to receive updates about events and activities
             </motion.p>
@@ -377,71 +371,55 @@ export const Home = () => {
               viewport={{ once: true }}
               transition={{ delay: 0.2 }}
               onSubmit={handleSubscribe}
-              className="space-y-4"
+              className="space-y-6"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <input
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
                   type="text"
                   placeholder="First Name"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   required
-                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 transition-all"
+                  variant="white"
                 />
-                <input
+                <Input
                   type="text"
                   placeholder="Last Name"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   required
-                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 transition-all"
+                  variant="white"
                 />
               </div>
-              <input
+              <Input
                 type="email"
                 placeholder="Email Address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 transition-all"
+                variant="white"
               />
               
               {subscribeError && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="text-sm bg-white/10 text-white px-4 py-3 rounded-lg"
-                >
+                <Alert variant="white">
                   {subscribeError}
-                </motion.div>
+                </Alert>
               )}
 
               {subscribeSuccess && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="text-sm bg-white/10 text-white px-4 py-3 rounded-lg"
-                >
+                <Alert variant="white">
                   Thank you for subscribing!
-                </motion.div>
+                </Alert>
               )}
 
-              <button
+              <Button
                 type="submit"
                 disabled={isSubmitting}
-                className={`w-full md:w-auto px-8 py-3 bg-white text-[#004aab] rounded-lg font-medium hover:bg-white/90 transition-all ${
-                  isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
-                }`}
+                variant="white"
+                isLoading={isSubmitting}
               >
-                {isSubmitting ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-[#004aab] mr-2"></div>
-                    Subscribing...
-                  </div>
-                ) : (
-                  'Subscribe'
-                )}
-              </button>
+                Subscribe
+              </Button>
             </motion.form>
           </div>
         </div>

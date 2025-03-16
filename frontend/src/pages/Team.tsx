@@ -133,7 +133,7 @@ export const Team = () => {
                       whileInView={{ scale: 1, opacity: 1 }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.3, delay: index * 0.1 + 0.2 }}
-                      className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-[#004aab] text-white px-4 py-1 rounded-full text-sm font-medium"
+                      className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-[#2563EB] text-white px-4 py-1.5 rounded-md text-sm font-medium"
                     >
                       {member.title}
                     </motion.div>
@@ -177,7 +177,7 @@ export const Team = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.3 }}
-              className="inline-block bg-[#004aab] text-white px-8 py-3 rounded-lg hover:bg-[#003d8f] transition-colors"
+              className="bg-[#2563EB] text-white px-8 py-3 rounded-[3px] text-base font-medium hover:bg-[#1d4ed8] transition-colors"
             >
               Contact Us
             </motion.a>
