@@ -43,8 +43,8 @@ def get_logo_html(mode="cid"):
             <div style="text-align: center; padding: 20px 0;">
                 <img src="cid:logo@asiancrossroads" 
                      alt="Asian Crossroads Logo" 
-                     style="width: 200px; height: auto; display: block; margin: 0 auto;"
-                     width="200">
+                     style="width: 150px; height: auto; display: block; margin: 0 auto;"
+                     width="150">
             </div>
         '''
     elif mode == "datauri":
@@ -55,8 +55,8 @@ def get_logo_html(mode="cid"):
                     <div style="text-align: center; padding: 20px 0;">
                         <img src="data:image/png;base64,{logo_data}" 
                              alt="Asian Crossroads Logo" 
-                             style="width: 200px; height: auto; display: block; margin: 0 auto;"
-                             width="200">
+                             style="width: 150px; height: auto; display: block; margin: 0 auto;"
+                             width="150">
                     </div>
                 '''
         except Exception as e:
@@ -71,9 +71,16 @@ def add_logo_to_html(html_content, mode="datauri"):
     if not logo_html:
         return html_content
         
-    # If the content is just plain text, wrap it in a div
+    # If the content is just plain text, wrap it in a div with nice formatting
     if not html_content.strip().startswith('<'):
-        html_content = f'<div style="white-space:pre-wrap;">{html_content}</div>'
+        html_content = f'''
+            <div class="ac-email-content-text">
+                {html_content}
+            </div>
+        '''
+    else:
+        # Add style to existing HTML content by wrapping it in a container
+        html_content = f'<div class="ac-email-content-html">{html_content}</div>'
     
     # Remove any existing logo if present
     html_content = re.sub(
@@ -91,7 +98,7 @@ def add_logo_to_html(html_content, mode="datauri"):
         flags=re.IGNORECASE
     )
     
-    # Create a complete HTML structure with the logo at the top
+    # Create a complete HTML structure with the logo at the top and scoped styles
     return f'''
         <!DOCTYPE html>
         <html lang="en">
@@ -102,21 +109,92 @@ def add_logo_to_html(html_content, mode="datauri"):
                 <meta name="supported-color-schemes" content="light">
                 <meta name="format-detection" content="telephone=no">
                 <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
+                <style>
+                    /* Reset styles for email container */
+                    .ac-email-wrapper {{
+                        all: initial;
+                        font-family: system-ui, -apple-system, sans-serif;
+                    }}
+                    
+                    /* Main container styles */
+                    .ac-email-container {{
+                        margin: 0;
+                        padding: 0;
+                        word-spacing: normal;
+                        background-color: #ffffff;
+                        font-family: system-ui, -apple-system, sans-serif;
+                        color: #333333;
+                        line-height: 1.4;
+                    }}
+                    
+                    /* Content text styles */
+                    .ac-email-content-text {{
+                        white-space: pre-wrap;
+                        line-height: 1.6;
+                        margin-bottom: 1em;
+                        font-family: 'Merriweather', Georgia, serif;
+                        color: #333333;
+                    }}
+                    
+                    /* HTML content styles */
+                    .ac-email-content-html {{
+                        line-height: 1.6;
+                        font-family: 'Merriweather', Georgia, serif;
+                        color: #333333;
+                    }}
+                    
+                    /* Override any existing styles */
+                    .ac-email-content-html p,
+                    .ac-email-content-html div {{
+                        margin-bottom: 1em;
+                        line-height: 1.6;
+                        font-family: 'Merriweather', Georgia, serif !important;
+                        color: #333333 !important;
+                        background: transparent !important;
+                    }}
+                    
+                    /* Main content area */
+                    .ac-email-content {{
+                        font-size: 16px;
+                        color: #333333;
+                        text-align: left;
+                        padding: 0 20px;
+                        font-family: 'Merriweather', Georgia, serif;
+                    }}
+                    
+                    /* Logo container */
+                    .ac-email-logo {{
+                        text-align: center;
+                        padding: 20px 0;
+                    }}
+                    
+                    /* Logo image */
+                    .ac-email-logo img {{
+                        width: 150px;
+                        height: auto;
+                        display: block;
+                        margin: 0 auto;
+                    }}
+                </style>
             </head>
-            <body style="margin:0;padding:0;word-spacing:normal;background-color:#ffffff;font-family:'Merriweather',Georgia,serif;">
-                <div role="article" aria-roledescription="email" lang="en" style="text-size-adjust:100%;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;background-color:#ffffff;">
-                    <table role="presentation" style="width:100%;border:none;border-spacing:0;border-collapse:collapse;">
-                        <tr>
-                            <td align="center" style="padding:0;">
-                                <div style="width:100%;max-width:800px;margin:0 auto;padding:20px;">
-                                    {logo_html}
-                                    <div style="font-family:'Merriweather',Georgia,serif;font-size:16px;line-height:1.6;color:#333333;text-align:left;padding:0 20px;">
-                                        {html_content}
+            <body>
+                <div class="ac-email-wrapper">
+                    <div class="ac-email-container" role="article" aria-roledescription="email" lang="en">
+                        <table role="presentation" style="width:100%;border:none;border-spacing:0;border-collapse:collapse;">
+                            <tr>
+                                <td align="center" style="padding:0;">
+                                    <div style="width:100%;max-width:800px;margin:0 auto;padding:20px;">
+                                        <div class="ac-email-logo">
+                                            {logo_html}
+                                        </div>
+                                        <div class="ac-email-content">
+                                            {html_content}
+                                        </div>
                                     </div>
-                                </div>
-                            </td>
-                        </tr>
-                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
                 </div>
             </body>
         </html>
@@ -312,9 +390,9 @@ def check_new_emails():
                 content = re.sub(r'\n{3,}', '\n\n', content)
                 content = content.strip()
             
-            # Create HTML version with logo
+            # Create HTML version with logo and styling
             final_html = add_logo_to_html(
-                html_content if html_content else f'<div style="white-space:pre-wrap;">{content}</div>',
+                html_content if html_content else content,
                 mode="datauri"
             )
             
@@ -377,23 +455,6 @@ def send_approved_email(email_id):
         print(f"Error getting subscribers: {str(e)}")
         raise
     
-    # Prepare cleaned HTML content (remove any previous logo and wrapping tags)
-    if email.html_content:
-        cleaned_html = re.sub(
-            r'<div[^>]*>\s*<img[^>]*alt="Asian Crossroads Logo"[^>]*>\s*</div>',
-            '',
-            email.html_content,
-            flags=re.IGNORECASE
-        )
-        cleaned_html = re.sub(
-            r'<!DOCTYPE[^>]*>|</?html[^>]*>|</?head[^>]*>|</?body[^>]*>',
-            '',
-            cleaned_html,
-            flags=re.IGNORECASE
-        )
-    else:
-        cleaned_html = f'<div style="white-space:pre-wrap;">{email.content}</div>'
-    
     # Loop through subscribers and send the email with inline logo using CID
     for subscriber in subscribers:
         print(f"\n--- Processing subscriber: {subscriber.email} ---")
@@ -413,21 +474,17 @@ def send_approved_email(email_id):
             # Add plain text part
             print("Adding plain text content...")
             text_content = email.content
-            if email.html_content:
-                text_content = re.sub(r'<br\s*/?>', '\n', email.html_content)
-                text_content = re.sub(r'</div>\s*<div[^>]*>', '\n\n', text_content)
-                text_content = re.sub(r'</p>\s*<p[^>]*>', '\n\n', text_content)
-                text_content = re.sub(r'<[^>]+>', '', text_content)
-                text_content = re.sub(r'\n{3,}', '\n\n', text_content)
-                text_content = text_content.strip()
-            
             text_part = MIMEText(text_content, 'plain', 'utf-8')
             alt_part.attach(text_part)
             
-            # Create HTML content with inline logo using CID reference
+            # Use the stored HTML content but replace data URI with CID for the logo
             print("Creating HTML content with logo...")
-            full_html = add_logo_to_html(cleaned_html, mode="cid")
-            html_part = MIMEText(full_html, 'html', 'utf-8')
+            html_content = re.sub(
+                r'data:image/png;base64,[^"]*',
+                'cid:logo@asiancrossroads',
+                email.html_content
+            )
+            html_part = MIMEText(html_content, 'html', 'utf-8')
             alt_part.attach(html_part)
             message.attach(alt_part)
             
@@ -449,9 +506,8 @@ def send_approved_email(email_id):
                 for attachment_meta in email.attachments:
                     try:
                         print(f"Processing attachment: {attachment_meta['filename']}")
-                        # Get attachment data from Gmail API
                         attachment_id = attachment_meta['attachment_id']
-                        message_id_length = len(email.original_email_id) + 1  # +1 for the underscore
+                        message_id_length = len(email.original_email_id) + 1
                         attachment_id_only = attachment_meta['attachment_id'][message_id_length:]
                         
                         print(f"Using message_id: {email.original_email_id}")
@@ -508,19 +564,6 @@ def send_approved_email(email_id):
         except Exception as e:
             print(f"Error processing subscriber {subscriber.email}: {str(e)}")
             continue
-    
-    # Save the fully styled HTML email to a file with inline styles (using data URI for logo)
-    try:
-        final_html_save = add_logo_to_html(cleaned_html, mode="datauri")
-        saved_emails_dir = os.path.join(settings.BASE_DIR, 'saved_emails')
-        os.makedirs(saved_emails_dir, exist_ok=True)
-        filename = f"email_{email.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.html"
-        file_path = os.path.join(saved_emails_dir, filename)
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(final_html_save)
-        print(f"Email HTML saved to {file_path}")
-    except Exception as e:
-        print(f"Error saving email HTML file: {str(e)}")
     
     # Update email status
     print("\nUpdating email status...")
