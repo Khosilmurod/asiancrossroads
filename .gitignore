@@ -53,3 +53,7 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+
+# API Keys and Tokens
+credentials.json
+token.pickle
