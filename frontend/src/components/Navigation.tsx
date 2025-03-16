@@ -59,6 +59,12 @@ export const Navigation = () => {
           <div className="flex items-center space-x-6">
             {user ? (
               <div className="flex items-center space-x-6">
+                {(user.role === 'ADMIN' || user.role === 'PRESIDENT' || user.role === 'BOARD') && (
+                  <NavLink to="/subscribers">Subscribers</NavLink>
+                )}
+                {(user.role === 'ADMIN' || user.role === 'PRESIDENT') && (
+                  <NavLink to="/emails">Email Approval</NavLink>
+                )}
                 <NavLink to="/profile">Profile</NavLink>
                 <button
                   onClick={() => logout()}
@@ -74,7 +80,13 @@ export const Navigation = () => {
                   <SocialIcon Icon={FaLinkedin} href="https://linkedin.com/company/asiancrossroads" />
                 </div>
                 <button
-                  onClick={() => window.location.href = 'mailto:join@asiancrossroads.org'}
+                  onClick={() => {
+                    if (window.location.pathname !== '/') {
+                      window.location.href = '/#mailing-list';
+                    } else {
+                      document.getElementById('mailing-list')?.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
                   className="bg-[#2563EB] text-white px-5 py-2 rounded-[3px] text-[15px] font-medium hover:bg-[#1d4ed8] transition-colors"
                 >
                   Join Mailing List

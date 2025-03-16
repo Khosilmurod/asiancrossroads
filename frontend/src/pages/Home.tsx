@@ -3,9 +3,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { upcomingEvents } from '../utils/data';
 import { TeamSection } from '../components/TeamSection';
+import axios from '../utils/axios';
 
 export const Home = () => {
   const [dautars, setDautars] = useState<{ id: number; x: number }[]>([]);
+  const [email, setEmail] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [subscribeError, setSubscribeError] = useState('');
+  const [subscribeSuccess, setSubscribeSuccess] = useState(false);
 
   const handleBackgroundClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).tagName !== 'BUTTON' && 
@@ -17,6 +24,51 @@ export const Home = () => {
       setTimeout(() => {
         setDautars(prev => prev.filter(d => d.id !== newDautar.id));
       }, 2000);
+    }
+  };
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubscribeError('');
+    setIsSubmitting(true);
+
+    try {
+      console.log('Attempting to subscribe with data:', { email, firstName, lastName });
+      const response = await axios.post('/api/subscribers/', {
+        email: email.trim(),
+        first_name: firstName.trim(),
+        last_name: lastName.trim()
+      });
+      console.log('Subscription response:', response);
+      setSubscribeSuccess(true);
+      setEmail('');
+      setFirstName('');
+      setLastName('');
+    } catch (err: any) {
+      console.error('Subscription error:', err);
+      console.error('Error response:', err.response);
+      
+      if (err.response?.data?.email) {
+        setSubscribeError(err.response.data.email[0]);
+      } else if (err.response?.data?.detail) {
+        setSubscribeError(err.response.data.detail);
+      } else if (err.response?.status === 404) {
+        setSubscribeError('The subscription service is currently unavailable.');
+      } else if (err.response?.status === 400) {
+        const errors = err.response.data;
+        const firstError = Object.values(errors)[0];
+        if (Array.isArray(firstError)) {
+          setSubscribeError(firstError[0]);
+        } else {
+          setSubscribeError('Please check your information and try again.');
+        }
+      } else if (!err.response) {
+        setSubscribeError('Network error. Please check your connection and try again.');
+      } else {
+        setSubscribeError('Failed to subscribe. Please try again later.');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -45,7 +97,7 @@ export const Home = () => {
       </AnimatePresence>
 
       {/* Hero Section */}
-      <section className="relative h-[85vh] overflow-hidden">
+      <section className="relative h-[95vh] overflow-hidden">
         <div 
           className="absolute inset-0" 
           style={{ 
@@ -55,8 +107,8 @@ export const Home = () => {
             backgroundPosition: 'center'
           }}
         />
-        <div className="absolute inset-0 bg-black/30" />
-        <div className="container-padded relative z-10 h-full flex items-center justify-center pt-20">
+        <div className="absolute inset-0 bg-black/15" />
+        <div className="container-padded relative z-10 h-full flex items-center justify-center pt-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -73,7 +125,7 @@ export const Home = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3, duration: 0.6 }}
-                className="bg-black/60 py-12 backdrop-blur-sm w-screen"
+                className="bg-black/25 py-12 backdrop-blur-sm w-screen"
               >
                 <div className="flex flex-col items-center gap-12 max-w-6xl mx-auto">
                   <div className="flex items-center gap-8">
@@ -93,10 +145,15 @@ export const Home = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="w-full max-w-2xl">
-                    <p className="text-lg text-white/90 leading-relaxed text-center">
-                      Bridging Cultures, Enriching Perspectives, Exploring the Crossroads of Eurasia
-                    </p>
+                  <div className="w-full max-w-2xl flex flex-col items-center gap-8">
+                    <button
+                      onClick={() => {
+                        document.getElementById('mailing-list')?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      className="bg-[#2563EB] text-white px-5 py-2 rounded-[3px] text-[15px] font-medium hover:bg-[#1d4ed8] transition-colors"
+                    >
+                      Join Mailing List
+                    </button>
                   </div>
                 </div>
               </motion.div>
@@ -293,28 +350,99 @@ export const Home = () => {
       <TeamSection />
 
       {/* Mailing List Section */}
-      <section className="py-20 bg-black text-white">
+      <section id="mailing-list" className="py-20 bg-[#004aab] text-white">
         <div className="container-padded">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-6">Join Our Mailing List</h2>
-            <p className="text-gray-300 mb-8">
-              Stay updated with our latest events, articles, and community news.
-            </p>
-            <form className="max-w-md mx-auto">
-              <div className="flex gap-4">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-3xl font-bold mb-4"
+            >
+              Stay Connected
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="text-lg text-white/90 mb-8"
+            >
+              Join our mailing list to receive updates about events and activities
+            </motion.p>
+
+            <motion.form
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              onSubmit={handleSubscribe}
+              className="space-y-4"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="flex-1 px-4 py-3 rounded-md text-black"
+                  type="text"
+                  placeholder="First Name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 transition-all"
                 />
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-[#004aab] text-white rounded-md hover:bg-[#003d8f] transition-colors"
-                >
-                  Subscribe
-                </button>
+                <input
+                  type="text"
+                  placeholder="Last Name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 transition-all"
+                />
               </div>
-            </form>
+              <input
+                type="email"
+                placeholder="Email Address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 transition-all"
+              />
+              
+              {subscribeError && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-sm bg-white/10 text-white px-4 py-3 rounded-lg"
+                >
+                  {subscribeError}
+                </motion.div>
+              )}
+
+              {subscribeSuccess && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-sm bg-white/10 text-white px-4 py-3 rounded-lg"
+                >
+                  Thank you for subscribing!
+                </motion.div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`w-full md:w-auto px-8 py-3 bg-white text-[#004aab] rounded-lg font-medium hover:bg-white/90 transition-all ${
+                  isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
+                }`}
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-[#004aab] mr-2"></div>
+                    Subscribing...
+                  </div>
+                ) : (
+                  'Subscribe'
+                )}
+              </button>
+            </motion.form>
           </div>
         </div>
       </section>

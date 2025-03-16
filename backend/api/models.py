@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 class TeamMember(models.Model):
     name = models.CharField(max_length=100)
@@ -53,3 +54,54 @@ class Article(models.Model):
 
     def __str__(self):
         return self.title
+
+class MailingListSubscriber(models.Model):
+    id = models.AutoField(primary_key=True)
+    email = models.EmailField(unique=True)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    university = models.CharField(max_length=100, blank=True, null=True)
+    interests = models.CharField(max_length=255, blank=True, null=True)
+    is_student = models.BooleanField(default=True)
+    subscribed_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-subscribed_at']
+        verbose_name = 'Mailing List Subscriber'
+        verbose_name_plural = 'Mailing List Subscribers'
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} ({self.email})"
+
+class IncomingEmail(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+    ]
+
+    sender_email = models.EmailField()
+    subject = models.CharField(max_length=255)
+    content = models.TextField()
+    html_content = models.TextField(blank=True, null=True)  # For HTML emails
+    received_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    original_email_id = models.CharField(max_length=255, unique=True)  # Gmail message ID
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_emails'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-received_at']
+        verbose_name = 'Incoming Email'
+        verbose_name_plural = 'Incoming Emails'
+
+    def __str__(self):
+        return f"{self.subject} - {self.sender_email} ({self.status})"
