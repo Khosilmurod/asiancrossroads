@@ -262,19 +262,28 @@ def send_approved_email(email_id):
             
             # Add attachments if any
             if email.has_attachments and email.attachments:
+                print(f"Processing {len(email.attachments)} attachments")
                 for attachment_meta in email.attachments:
                     try:
+                        print(f"Processing attachment: {attachment_meta['filename']}")
                         # Get attachment data from Gmail API
                         attachment_id = attachment_meta['attachment_id']
-                        msg_id, att_id = attachment_id.split('_')
+                        # The attachment ID is everything after the message ID
+                        message_id_length = len(email.original_email_id) + 1  # +1 for the underscore
+                        attachment_id_only = attachment_meta['attachment_id'][message_id_length:]
+                        
+                        print(f"Using message_id: {email.original_email_id}")
+                        print(f"Using attachment_id: {attachment_id_only}")
+                        
                         attachment = service.users().messages().attachments().get(
                             userId='me',
-                            messageId=msg_id,
-                            id=att_id
+                            messageId=email.original_email_id,
+                            id=attachment_id_only
                         ).execute()
                         
                         if attachment and 'data' in attachment:
                             file_data = base64.urlsafe_b64decode(attachment['data'])
+                            print(f"Successfully retrieved attachment data, size: {len(file_data)} bytes")
                             
                             # Create attachment part
                             main_type, sub_type = attachment_meta['content_type'].split('/', 1)
