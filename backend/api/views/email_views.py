@@ -33,6 +33,13 @@ class IncomingEmailViewSet(viewsets.ModelViewSet):
             sender_email__in=authorized_emails
         ).order_by('-received_at')
 
+    @action(detail=True, methods=['post'])
+    def delete_email(self, request, pk=None):
+        """Delete an email."""
+        email = self.get_object()
+        email.delete()
+        return Response({'status': 'success'})
+
     @action(detail=False, methods=['post'])
     def check_new(self, request):
         """Manually trigger checking for new emails."""

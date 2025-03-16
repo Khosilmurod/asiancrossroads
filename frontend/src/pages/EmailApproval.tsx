@@ -10,6 +10,7 @@ import {
   FiInbox,
   FiPaperclip,
   FiLink,
+  FiTrash2,
 } from 'react-icons/fi';
 
 interface Email {
@@ -40,16 +41,23 @@ export const EmailApproval: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [downloadingAttachment, setDownloadingAttachment] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const canManageEmails = user?.role === 'ADMIN' || user?.role === 'PRESIDENT';
 
-  const fetchEmails = async () => {
+  const fetchEmails = async (pageNum = 1, append = false) => {
     try {
-      const response = await axios.get('/api/emails/');
+      const response = await axios.get(`/api/emails/?page=${pageNum}`);
       console.log('Email response:', response.data);
-      setEmails(response.data.results || []);
+      if (append) {
+        setEmails(prev => [...prev, ...(response.data.results || [])]);
+      } else {
+        setEmails(response.data.results || []);
+      }
+      setHasMore(!!response.data.next);
     } catch (err: any) {
       if (err.response?.status === 403) {
         navigate('/');
@@ -61,6 +69,12 @@ export const EmailApproval: React.FC = () => {
     }
   };
 
+  const loadMore = async () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    await fetchEmails(nextPage, true);
+  };
+
   const checkNewEmails = async () => {
     setRefreshing(true);
     try {
@@ -70,6 +84,18 @@ export const EmailApproval: React.FC = () => {
       console.error('Error checking new emails:', err);
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const handleDelete = async (emailId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this email?')) {
+      try {
+        await axios.post(`/api/emails/${emailId}/delete_email/`);
+        await fetchEmails();
+      } catch (err) {
+        console.error('Error deleting email:', err);
+      }
     }
   };
 
@@ -159,12 +185,18 @@ export const EmailApproval: React.FC = () => {
   };
 
   useEffect(() => {
+    if (!user) {
+      return;
+    }
     if (!canManageEmails) {
       navigate('/');
       return;
     }
     fetchEmails();
-  }, [canManageEmails, navigate]);
+    checkNewEmails(); // Auto-check for new emails on page load
+    const interval = setInterval(checkNewEmails, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, [canManageEmails, navigate, user]);
 
   if (loading) {
     return (
@@ -286,6 +318,16 @@ export const EmailApproval: React.FC = () => {
                         </div>
                       </div>
                     ))}
+                    {hasMore && (
+                      <div className="flex justify-center mt-4 mb-8">
+                        <button
+                          onClick={loadMore}
+                          className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded hover:bg-blue-50 transition-colors"
+                        >
+                          Show More
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -331,25 +373,35 @@ export const EmailApproval: React.FC = () => {
                               )}
                             </div>
                           </div>
-                          {/* Approve / Reject */}
-                          {email.status === 'PENDING' && (
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <button
-                                onClick={(e) => handleReject(email.id, e)}
-                                className="px-3 py-1.5 border border-gray-200 text-gray-700 rounded-md hover:bg-gray-50 transition-colors flex items-center gap-1.5 text-sm font-medium"
-                              >
-                                <FiX className="w-4 h-4" />
-                                <span>Reject</span>
-                              </button>
-                              <button
-                                onClick={(e) => handleApprove(email.id, e)}
-                                className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1.5 text-sm font-medium"
-                              >
-                                <FiCheck className="w-4 h-4" />
-                                <span>Approve</span>
-                              </button>
-                            </div>
-                          )}
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {email.status === 'PENDING' && (
+                              <>
+                                <button
+                                  onClick={(e) => handleReject(email.id, e)}
+                                  className="px-3 py-1.5 border border-gray-200 text-gray-700 rounded-md hover:bg-gray-50 transition-colors flex items-center gap-1.5 text-sm font-medium"
+                                >
+                                  <FiX className="w-4 h-4" />
+                                  <span>Reject</span>
+                                </button>
+                                <button
+                                  onClick={(e) => handleApprove(email.id, e)}
+                                  className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1.5 text-sm font-medium"
+                                >
+                                  <FiCheck className="w-4 h-4" />
+                                  <span>Approve</span>
+                                </button>
+                              </>
+                            )}
+                            <button
+                              onClick={(e) => handleDelete(email.id, e)}
+                              className="px-3 py-1.5 border border-gray-200 text-gray-700 rounded-md hover:bg-gray-50 transition-colors flex items-center gap-1.5 text-sm font-medium"
+                              title="Delete Email"
+                            >
+                              <FiTrash2 className="w-4 h-4" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
                         </div>
 
                         {/* Email body (in iframe to avoid style leaks) */}
