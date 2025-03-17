@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const Register = () => {
-  const { register, isAdmin, isPresident, user } = useAuth();
+  const { register, user } = useAuth();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
@@ -20,13 +20,6 @@ const Register = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    // Redirect if not admin or president
-    if (user && !isAdmin() && !isPresident()) {
-      navigate('/profile');
-    }
-  }, [user, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
@@ -58,10 +51,6 @@ const Register = () => {
       setLoading(false);
     }
   };
-
-  if (!user || (!isAdmin() && !isPresident())) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -204,7 +193,6 @@ const Register = () => {
                       className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     >
                       <option value="BOARD">Board Member</option>
-                      <option value="PRESIDENT">President</option>
                     </select>
                   </div>
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { IconType } from 'react-icons';
 import { FaInstagram, FaLinkedin, FaUser } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
@@ -38,6 +38,12 @@ const NavLink = ({ to, children }: { to: string; children: React.ReactNode }) =>
 export const Navigation = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-50">
@@ -60,14 +66,14 @@ export const Navigation = () => {
             {user ? (
               <div className="flex items-center space-x-6">
                 {(user.role === 'ADMIN' || user.role === 'PRESIDENT' || user.role === 'BOARD') && (
-                  <NavLink to="/subscribers">Subscribers</NavLink>
-                )}
-                {(user.role === 'ADMIN' || user.role === 'PRESIDENT') && (
-                  <NavLink to="/emails">Emails</NavLink>
+                  <>
+                    <NavLink to="/subscribers">Subscribers</NavLink>
+                    <NavLink to="/emails">Emails</NavLink>
+                  </>
                 )}
                 <NavLink to="/profile">Profile</NavLink>
                 <button
-                  onClick={() => logout()}
+                  onClick={handleLogout}
                   className="text-[15px] text-gray-600 hover:text-gray-900 transition-colors"
                 >
                   Sign out

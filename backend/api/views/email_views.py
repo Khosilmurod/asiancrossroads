@@ -15,7 +15,7 @@ class CanManageEmails(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.role in ['ADMIN', 'PRESIDENT']
+        return request.user.role in ['ADMIN', 'PRESIDENT', 'BOARD']
 
 class IncomingEmailViewSet(viewsets.ModelViewSet):
     queryset = IncomingEmail.objects.all()
@@ -23,20 +23,33 @@ class IncomingEmailViewSet(viewsets.ModelViewSet):
     permission_classes = [CanManageEmails]
 
     def get_queryset(self):
-        # Get all authorized email addresses (board members, admins, president)
-        authorized_emails = User.objects.filter(
-            role__in=['ADMIN', 'PRESIDENT', 'BOARD']
-        ).values_list('email', flat=True)
+        user = self.request.user
         
-        # Filter emails by authorized senders
-        return IncomingEmail.objects.filter(
-            sender_email__in=authorized_emails
-        ).order_by('-received_at')
+        # Get all authorized email addresses
+        if user.role in ['ADMIN', 'PRESIDENT']:
+            # Admins and Presidents can see all emails
+            authorized_emails = User.objects.filter(
+                role__in=['ADMIN', 'PRESIDENT', 'BOARD']
+            ).values_list('email', flat=True)
+            return IncomingEmail.objects.filter(
+                sender_email__in=authorized_emails
+            ).order_by('-received_at')
+        else:
+            # Board members can only see their own emails
+            return IncomingEmail.objects.filter(
+                sender_email__iexact=user.email
+            ).order_by('-received_at')
 
     @action(detail=True, methods=['post'])
     def delete_email(self, request, pk=None):
         """Delete an email."""
         email = self.get_object()
+        # Only allow users to delete their own emails or admins/presidents to delete any
+        if request.user.role not in ['ADMIN', 'PRESIDENT'] and email.sender_email.lower() != request.user.email.lower():
+            return Response(
+                {'error': 'You do not have permission to delete this email'},
+                status=status.HTTP_403_FORBIDDEN
+            )
         email.delete()
         return Response({'status': 'success'})
 
@@ -57,6 +70,13 @@ class IncomingEmailViewSet(viewsets.ModelViewSet):
         """Approve an email and send it to all subscribers."""
         email = self.get_object()
         
+        # Check if user has permission to approve this email
+        if request.user.role not in ['ADMIN', 'PRESIDENT'] and email.sender_email.lower() != request.user.email.lower():
+            return Response(
+                {'error': 'You do not have permission to approve this email'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
         if email.status != 'PENDING':
             return Response(
                 {'error': 'Only pending emails can be approved'},
@@ -64,15 +84,11 @@ class IncomingEmailViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            # Send the email
             send_approved_email(email.id)
-            
-            # Update email status
             email.status = 'APPROVED'
             email.approved_by = request.user
             email.approved_at = timezone.now()
             email.save()
-            
             return Response({'status': 'success'})
         except Exception as e:
             return Response(
@@ -85,6 +101,13 @@ class IncomingEmailViewSet(viewsets.ModelViewSet):
         """Reject an email."""
         email = self.get_object()
         
+        # Check if user has permission to reject this email
+        if request.user.role not in ['ADMIN', 'PRESIDENT'] and email.sender_email.lower() != request.user.email.lower():
+            return Response(
+                {'error': 'You do not have permission to reject this email'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
         if email.status != 'PENDING':
             return Response(
                 {'error': 'Only pending emails can be rejected'},
@@ -95,7 +118,6 @@ class IncomingEmailViewSet(viewsets.ModelViewSet):
         email.approved_by = request.user
         email.approved_at = timezone.now()
         email.save()
-        
         return Response({'status': 'success'})
 
     @action(detail=False, methods=['get'], url_path='attachment/(?P<attachment_id>[^/.]+)', permission_classes=[])

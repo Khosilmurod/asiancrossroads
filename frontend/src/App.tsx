@@ -14,17 +14,22 @@ import EditUser from './pages/EditUser';
 import EditProfile from './pages/EditProfile';
 import { Subscribers } from './pages/Subscribers';
 import { EmailApproval } from './pages/EmailApproval';
+import { NotFound } from './components/NotFound';
 
 // Protected Route component with role check
 const RoleProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: string[] }> = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600" />
+      </div>
+    );
   }
 
   if (!user || !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" />;
+    return <NotFound />;
   }
 
   return <>{children}</>;
@@ -35,7 +40,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600" />
+      </div>
+    );
   }
 
   if (!user) {
@@ -55,22 +64,58 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/subscribers" element={<Subscribers />} />
-              <Route path="/emails" element={<EmailApproval />} />
+              <Route
+                path="/register"
+                element={
+                  <RoleProtectedRoute allowedRoles={['ADMIN', 'PRESIDENT']}>
+                    <Register />
+                  </RoleProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/subscribers"
+                element={
+                  <RoleProtectedRoute allowedRoles={['ADMIN', 'PRESIDENT', 'BOARD']}>
+                    <Subscribers />
+                  </RoleProtectedRoute>
+                }
+              />
+              <Route
+                path="/emails"
+                element={
+                  <RoleProtectedRoute allowedRoles={['ADMIN', 'PRESIDENT', 'BOARD']}>
+                    <EmailApproval />
+                  </RoleProtectedRoute>
+                }
+              />
               <Route path="/events" element={<Events />} />
               <Route path="/articles" element={<Articles />} />
               <Route path="/team" element={<Team />} />
               <Route
                 path="/users/:id/edit"
                 element={
-                  <ProtectedRoute>
+                  <RoleProtectedRoute allowedRoles={['ADMIN', 'PRESIDENT']}>
                     <EditUser />
+                  </RoleProtectedRoute>
+                }
+              />
+              <Route
+                path="/edit-profile"
+                element={
+                  <ProtectedRoute>
+                    <EditProfile />
                   </ProtectedRoute>
                 }
               />
-              <Route path="/edit-profile" element={<EditProfile />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
           <Footer />
