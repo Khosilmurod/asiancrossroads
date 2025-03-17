@@ -22,23 +22,47 @@ export const Events = () => {
       const response = await axios.get('/api/events/');
       const events = response.data.results || response.data;
       const now = new Date();
+      
+      console.log('Current time:', now.toISOString());
+      console.log('All events:', events);
 
-      const upcoming = events
-        .filter((event: Event) => {
-          const endDate = event.end_date ? new Date(event.end_date) : new Date(event.start_date);
-          return endDate >= now;
-        })
-        .sort((a: Event, b: Event) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+      // Helper function to normalize date comparison
+      const isEventPast = (event: Event) => {
+        const startDate = new Date(event.start_date);
+        const endDate = event.end_date ? new Date(event.end_date) : startDate;
+        return endDate < now;
+      };
 
-      const past = events
-        .filter((event: Event) => {
-          const endDate = event.end_date ? new Date(event.end_date) : new Date(event.start_date);
-          return endDate < now;
-        })
-        .sort((a: Event, b: Event) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
+      // Filter and categorize events
+      const [past, upcoming] = events.reduce(
+        (acc: [Event[], Event[]], event: Event) => {
+          // For non-board members, skip inactive events
+          if (!canManageEvents && !event.is_active) {
+            return acc;
+          }
 
-      setUpcomingEvents(upcoming);
-      setPastEvents(past);
+          if (isEventPast(event)) {
+            acc[0].push(event); // past events
+          } else {
+            acc[1].push(event); // upcoming events
+          }
+          return acc;
+        },
+        [[], []]
+      );
+
+      // Sort past events by start date descending (most recent first)
+      const sortedPast = past.sort((a: Event, b: Event) => 
+        new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
+      );
+
+      // Sort upcoming events by start date ascending (nearest first)
+      const sortedUpcoming = upcoming.sort((a: Event, b: Event) => 
+        new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+      );
+
+      setUpcomingEvents(sortedUpcoming);
+      setPastEvents(sortedPast);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load events');
       console.error('Error fetching events:', err);
@@ -52,10 +76,9 @@ export const Events = () => {
       await axios.patch(`/api/events/${event.id}/`, {
         is_active: !event.is_active
       });
-      fetchEvents(); // Refresh the events list
+      fetchEvents();
     } catch (err: any) {
       console.error('Error toggling event status:', err);
-      // Show error message to user
     }
   };
 
@@ -93,8 +116,6 @@ export const Events = () => {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
     });
   };
 
@@ -113,119 +134,151 @@ export const Events = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Events</h1>
-          {canManageEvents && (
-            <button
-              onClick={handleCreateEvent}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-            >
-              Create Event
-            </button>
+    <div className="min-h-screen bg-white py-20">
+      <div className="container-padded">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex items-center justify-between mb-12">
+            <h1 className="text-3xl font-bold">Events</h1>
+            {canManageEvents && (
+              <button
+                onClick={handleCreateEvent}
+                className="text-sm font-medium text-black hover:text-gray-600 transition-colors"
+              >
+                Create Event +
+              </button>
+            )}
+          </div>
+
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+              {error}
+            </div>
           )}
-        </div>
 
-        {error && (
-          <div className="mb-4 bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-            {error}
-          </div>
-        )}
-
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          </div>
-        ) : (
-          <>
-            <div className="mb-12">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Upcoming Events</h2>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {upcomingEvents.map((event) => (
-                  <div key={event.id} className="bg-white rounded-lg shadow overflow-hidden">
-                    {event.cover_image && (
+          <div className="mb-16">
+            <h2 className="text-3xl font-bold mb-12">Upcoming Events</h2>
+            <div className="space-y-8">
+              {upcomingEvents.map((event) => (
+                <motion.div
+                  key={event.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="group cursor-pointer"
+                >
+                  {event.cover_image && (
+                    <div className="aspect-[2/1] overflow-hidden rounded-lg mb-4">
                       <img
                         src={event.cover_image}
                         alt={event.title}
-                        className="w-full h-48 object-cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                    )}
-                    <div className="p-6">
-                      <h3 className="text-xl font-semibold text-gray-900">{event.title}</h3>
-                      <p className="mt-2 text-gray-600 line-clamp-3">{event.description}</p>
-                      <div className="mt-4 space-y-2">
-                        <p className="text-sm text-gray-500">
-                          <span className="font-medium">Date:</span>{' '}
-                          {new Date(event.start_date).toLocaleDateString()}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          <span className="font-medium">Venue:</span> {event.venue}
-                        </p>
-                        {canManageEvents && (
-                          <div className="mt-4 flex items-center justify-between">
-                            <button
-                              onClick={() => toggleEventStatus(event)}
-                              className={`px-3 py-1 rounded text-sm font-medium ${
-                                event.is_active
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-gray-100 text-gray-800'
-                              }`}
-                            >
-                              {event.is_active ? 'Active' : 'Inactive'}
-                            </button>
-                            <button
-                              onClick={() => handleEditEvent(event)}
-                              className="text-indigo-600 hover:text-indigo-800"
-                            >
-                              Edit
-                            </button>
-                          </div>
-                        )}
+                    </div>
+                  )}
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-xl font-medium mb-2">{event.title}</h3>
+                      <div className="text-sm text-gray-600">
+                        <div>{formatDate(event.start_date)}</div>
+                        <div>{event.venue}</div>
                       </div>
                     </div>
+                    <div className="flex flex-col items-end space-y-2">
+                      <span className="px-3 py-1 text-sm font-medium text-gray-600 bg-gray-100 rounded-full">
+                        {event.category}
+                      </span>
+                      {canManageEvents && (
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => toggleEventStatus(event)}
+                            className={`px-3 py-1 rounded text-sm font-medium ${
+                              event.is_active
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {event.is_active ? 'Active' : 'Inactive'}
+                          </button>
+                          <button
+                            onClick={() => handleEditEvent(event)}
+                            className="px-3 py-1 rounded text-sm font-medium bg-indigo-100 text-indigo-800"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ))}
-              </div>
+                </motion.div>
+              ))}
               {upcomingEvents.length === 0 && (
                 <p className="text-gray-500 text-center">No upcoming events</p>
               )}
             </div>
+          </div>
 
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Past Events</h2>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {pastEvents.map((event) => (
-                  <div key={event.id} className="bg-white rounded-lg shadow overflow-hidden">
-                    {event.cover_image && (
+          <div>
+            <h2 className="text-3xl font-bold mb-12">Past Events</h2>
+            <div className="space-y-8">
+              {pastEvents.map((event) => (
+                <motion.div
+                  key={event.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="group cursor-pointer"
+                >
+                  {event.cover_image && (
+                    <div className="aspect-[2/1] overflow-hidden rounded-lg mb-4">
                       <img
                         src={event.cover_image}
                         alt={event.title}
-                        className="w-full h-48 object-cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                    )}
-                    <div className="p-6">
-                      <h3 className="text-xl font-semibold text-gray-900">{event.title}</h3>
-                      <p className="mt-2 text-gray-600 line-clamp-3">{event.description}</p>
-                      <div className="mt-4 space-y-2">
-                        <p className="text-sm text-gray-500">
-                          <span className="font-medium">Date:</span>{' '}
-                          {new Date(event.start_date).toLocaleDateString()}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          <span className="font-medium">Venue:</span> {event.venue}
-                        </p>
+                    </div>
+                  )}
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-xl font-medium mb-2">{event.title}</h3>
+                      <div className="text-sm text-gray-600">
+                        <div>{formatDate(event.start_date)}</div>
+                        <div>{event.venue}</div>
                       </div>
                     </div>
+                    <div className="flex flex-col items-end space-y-2">
+                      <span className="px-3 py-1 text-sm font-medium text-gray-600 bg-gray-100 rounded-full">
+                        {event.category}
+                      </span>
+                      {canManageEvents && (
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => toggleEventStatus(event)}
+                            className={`px-3 py-1 rounded text-sm font-medium ${
+                              event.is_active
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {event.is_active ? 'Active' : 'Inactive'}
+                          </button>
+                          <button
+                            onClick={() => handleEditEvent(event)}
+                            className="px-3 py-1 rounded text-sm font-medium bg-indigo-100 text-indigo-800"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ))}
-              </div>
+                </motion.div>
+              ))}
               {pastEvents.length === 0 && (
                 <p className="text-gray-500 text-center">No past events</p>
               )}
             </div>
-          </>
-        )}
+          </div>
+        </div>
       </div>
 
       <EventModal

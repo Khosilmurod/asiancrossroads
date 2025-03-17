@@ -37,18 +37,25 @@ class EventViewSet(viewsets.ModelViewSet):
         if start_date and end_date:
             queryset = queryset.filter(start_date__range=[start_date, end_date])
             
-        # Filter upcoming/past events
-        show = self.request.query_params.get('show', 'upcoming')
+        # Only apply past/upcoming filter if explicitly requested
+        show = self.request.query_params.get('show', None)
         if show == 'upcoming':
-            queryset = queryset.filter(start_date__gte=timezone.now())
+            queryset = queryset.filter(
+                Q(end_date__gte=timezone.now()) | 
+                Q(end_date__isnull=True, start_date__gte=timezone.now())
+            )
         elif show == 'past':
-            queryset = queryset.filter(start_date__lt=timezone.now())
+            queryset = queryset.filter(
+                Q(end_date__lt=timezone.now()) | 
+                Q(end_date__isnull=True, start_date__lt=timezone.now())
+            )
             
         # Search by title or description
         search = self.request.query_params.get('search', None)
         if search:
             queryset = queryset.filter(
-                Q(title__icontains=search) | Q(description__icontains=search)
+                Q(title__icontains=search) |
+                Q(description__icontains=search)
             )
             
         return queryset.select_related('created_by')
