@@ -178,75 +178,71 @@ export const EmailApproval: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <div className="flex-grow">
-        <div className="h-full">
-          <div className="flex flex-1 overflow-hidden">
-            {/* Left column: email list */}
-            <div className="w-80 bg-white border-r border-gray-200 flex flex-col h-[calc(100vh-72px)] sticky top-[72px]">
-              <CheckNewButton onCheck={checkNewEmails} refreshing={refreshing} />
-              
-              <div className="flex-1 overflow-y-auto">
-                {(!emails || emails.length === 0) ? (
-                  <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                    <FiInbox className="w-12 h-12 text-gray-400 mb-3" />
-                    <div className="text-gray-600 font-medium">
-                      {user?.role === 'BOARD' 
-                        ? "You haven't sent any emails yet"
-                        : "No emails to review"}
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    {emails.map((email) => (
-                      <EmailListItem
-                        key={email.id}
-                        email={email}
-                        isSelected={selectedEmail === email.id}
-                        onSelect={setSelectedEmail}
-                        onApprove={handleApprove}
-                        onReject={handleReject}
-                        canApprove={user?.role === 'ADMIN' || user?.role === 'PRESIDENT' || email.sender_email.toLowerCase() === user?.email?.toLowerCase()}
-                      />
-                    ))}
-                    {hasMore && (
-                      <div className="flex justify-center mt-4 mb-8">
-                        <button
-                          onClick={loadMore}
-                          className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded hover:bg-blue-50 transition-colors"
-                        >
-                          Show More
-                        </button>
-                      </div>
-                    )}
+    <div className="h-[calc(100vh-72px)] mt-[72px] bg-gray-50 fixed inset-x-0 bottom-0">
+      <div className="flex h-full">
+        {/* Left column: email list */}
+        <div className="w-80 bg-white border-r border-gray-200 flex flex-col h-full">
+          <CheckNewButton onCheck={checkNewEmails} refreshing={refreshing} />
+          
+          <div className="flex-1 overflow-y-auto">
+            {(!emails || emails.length === 0) ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                <FiInbox className="w-12 h-12 text-gray-400 mb-3" />
+                <div className="text-gray-600 font-medium">
+                  {user?.role === 'BOARD' 
+                    ? "No emails yet!!"
+                    : "No emails to review"}
+                </div>
+              </div>
+            ) : (
+              <div>
+                {emails.map((email) => (
+                  <EmailListItem
+                    key={email.id}
+                    email={email}
+                    isSelected={selectedEmail === email.id}
+                    onSelect={setSelectedEmail}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
+                    canApprove={user?.role === 'ADMIN' || user?.role === 'PRESIDENT' || email.sender_email.toLowerCase() === user?.email?.toLowerCase()}
+                  />
+                ))}
+                {hasMore && (
+                  <div className="flex justify-center mt-4 mb-8">
+                    <button
+                      onClick={loadMore}
+                      className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded hover:bg-blue-50 transition-colors"
+                    >
+                      Show More
+                    </button>
                   </div>
                 )}
               </div>
-            </div>
+            )}
+          </div>
+        </div>
 
-            {/* Right column: selected email details */}
-            <div className="flex-1 overflow-y-auto bg-gray-50 h-[calc(100vh-72px)]">
-              <div className="h-full p-6">
-                {selectedEmail ? (
-                  emails
-                    .filter((e) => e.id === selectedEmail)
-                    .map((email) => (
-                      <EmailDetails
-                        key={email.id}
-                        email={email}
-                        onApprove={handleApprove}
-                        onReject={handleReject}
-                        onDelete={handleDelete}
-                        onDownloadAttachment={handleDownloadAttachment}
-                        downloadingAttachment={!!downloadingAttachment}
-                        canApprove={user?.role === 'ADMIN' || user?.role === 'PRESIDENT' || email.sender_email.toLowerCase() === user?.email?.toLowerCase()}
-                      />
-                    ))
-                ) : (
-                  <EmptyState />
-                )}
-              </div>
-            </div>
+        {/* Right column: selected email details */}
+        <div className="flex-1 bg-gray-50 h-full overflow-y-auto">
+          <div className="h-full p-6">
+            {selectedEmail ? (
+              emails
+                .filter((e) => e.id === selectedEmail)
+                .map((email) => (
+                  <EmailDetails
+                    key={email.id}
+                    email={email}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
+                    onDelete={handleDelete}
+                    onDownloadAttachment={handleDownloadAttachment}
+                    downloadingAttachment={!!downloadingAttachment}
+                    canApprove={user?.role === 'ADMIN' || user?.role === 'PRESIDENT' || email.sender_email.toLowerCase() === user?.email?.toLowerCase()}
+                  />
+                ))
+            ) : (
+              <EmptyState />
+            )}
           </div>
         </div>
       </div>

@@ -46,21 +46,21 @@ export const EmailDetails: React.FC<EmailDetailsProps> = ({
 }) => {
   return (
     <div className="bg-white rounded-lg shadow-sm h-full flex flex-col">
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">{email.subject}</h2>
-          <div className="flex items-center gap-2">
+      <div className="px-4 py-3 border-b border-gray-200">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-medium text-gray-900 truncate pr-4">{email.subject}</h2>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             {canApprove && email.status === 'PENDING' && (
               <>
                 <button
                   onClick={() => onReject(email.id)}
-                  className="px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors"
+                  className="px-2.5 py-1 text-sm font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors"
                 >
                   Reject
                 </button>
                 <button
                   onClick={() => onApprove(email.id)}
-                  className="px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors"
+                  className="px-2.5 py-1 text-sm font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors"
                 >
                   Approve
                 </button>
@@ -68,20 +68,20 @@ export const EmailDetails: React.FC<EmailDetailsProps> = ({
             )}
             <button
               onClick={() => onDelete(email.id)}
-              className="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded"
+              className="p-1 text-gray-400 hover:text-red-500 transition-colors rounded"
               title="Delete"
             >
               <FiTrash2 className="w-4 h-4" />
             </button>
           </div>
         </div>
-        <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
+        <div className="flex items-center justify-between text-xs text-gray-500">
           <span>From: {email.sender_email}</span>
           <span>Received: {new Date(email.received_at).toLocaleString()}</span>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto">
         {email.html_content ? (
           <iframe
             srcDoc={email.html_content}
@@ -89,42 +89,36 @@ export const EmailDetails: React.FC<EmailDetailsProps> = ({
             title="Email content"
           />
         ) : (
-          <div className="prose max-w-none">
+          <div className="prose max-w-none p-4">
             <p className="whitespace-pre-wrap">{email.content}</p>
           </div>
         )}
       </div>
 
-      {email.attachments.length > 0 && (
-        <div className="border-t border-gray-200 p-6">
-          <h3 className="text-sm font-medium text-gray-900 mb-3">Attachments</h3>
-          <div className="space-y-2">
-            {email.attachments.map((attachment) => (
-              <div
-                key={attachment.id}
-                className="flex items-center justify-between bg-gray-50 p-3 rounded"
-              >
-                <span className="text-sm text-gray-700">{attachment.filename}</span>
+      <div className="border-t border-gray-200 bg-gray-50">
+        {email.attachments.length > 0 && (
+          <div className="px-4 py-2 border-b border-gray-200">
+            <div className="flex flex-wrap gap-2">
+              {email.attachments.map((attachment) => (
                 <button
+                  key={attachment.id}
                   onClick={() => onDownloadAttachment(email.id, attachment.id)}
                   disabled={downloadingAttachment}
-                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1.5 px-2 py-1 text-xs text-blue-600 hover:text-blue-700 bg-white rounded border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {downloadingAttachment ? (
-                    <FiLoader className="w-4 h-4 animate-spin" />
+                    <FiLoader className="w-3 h-3 animate-spin" />
                   ) : (
-                    <FiDownload className="w-4 h-4" />
+                    <FiDownload className="w-3 h-3" />
                   )}
-                  Download
+                  {attachment.filename}
                 </button>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
-
-      <div className="border-t border-gray-200 p-6">
-        <div className="flex items-center justify-between text-sm">
+        )}
+        
+        <div className="px-4 py-2 flex items-center justify-between text-xs">
           <span
             className={`px-2 py-0.5 rounded-full font-medium ${
               email.status === 'PENDING'

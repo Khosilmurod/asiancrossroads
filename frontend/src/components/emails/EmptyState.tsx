@@ -7,7 +7,7 @@ export const EmptyState: React.FC = () => {
       <div className="flex flex-col items-center">
         <FiMail className="w-16 h-16 mb-6 text-gray-400" />
         <span className="font-medium text-gray-600">
-          Select an email to view its content
+          Select an email :<span>{")"}</span>
         </span>
       </div>
     </div>
