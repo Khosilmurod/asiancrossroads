@@ -19,26 +19,56 @@ class TeamMember(models.Model):
         return f"{self.name} - {self.role}"
 
 class Event(models.Model):
+    EVENT_CATEGORIES = [
+        ('SEMINAR', 'Seminar'),
+        ('SOCIAL', 'Social Event'),
+        ('WORKSHOP', 'Workshop'),
+        ('CONFERENCE', 'Conference'),
+        ('CULTURAL', 'Cultural Event'),
+        ('OTHER', 'Other'),
+    ]
+
     title = models.CharField(max_length=200)
     description = models.TextField()
-    date = models.DateTimeField()
-    location = models.CharField(max_length=200)
-    image = models.URLField(blank=True)
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField(null=True, blank=True)
+    venue = models.CharField(max_length=200)
+    registration_link = models.URLField(blank=True)
+    cover_image = models.URLField(blank=True)
+    category = models.CharField(max_length=20, choices=EVENT_CATEGORIES, default='OTHER')
+    capacity = models.PositiveIntegerField(null=True, blank=True)
+    current_registrations = models.PositiveIntegerField(default=0)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         related_name='created_events'
     )
-    is_published = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        ordering = ['-date']
+        ordering = ['-start_date']
         
     def __str__(self):
         return self.title
+    
+    @property
+    def is_full(self):
+        if self.capacity is None:
+            return False
+        return self.current_registrations >= self.capacity
+    
+    @property
+    def spots_left(self):
+        if self.capacity is None:
+            return None
+        return max(0, self.capacity - self.current_registrations)
+    
+    @property
+    def has_ended(self):
+        return timezone.now() > (self.end_date or self.start_date)
 
 class Article(models.Model):
     title = models.CharField(max_length=200)

@@ -43,7 +43,7 @@ const Login = () => {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex flex-col items-center pt-20 pb-12 px-6">
       <div className="w-full max-w-md">
         <img
-          src="/logo.png"
+          src="/logo1.png"
           alt="Logo"
           className="mx-auto h-16 w-auto mb-8"
         />

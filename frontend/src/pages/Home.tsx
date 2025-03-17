@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { upcomingEvents } from '../utils/data';
+import { Event } from '../types';
 import { TeamSection } from '../components/TeamSection';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -17,6 +17,44 @@ export const Home = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [subscribeError, setSubscribeError] = useState('');
   const [subscribeSuccess, setSubscribeSuccess] = useState(false);
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await axios.get('/api/events/');
+        const events = response.data.results || response.data;
+        const now = new Date();
+        const upcoming = events
+          .filter((event: Event) => {
+            const endDate = event.end_date ? new Date(event.end_date) : new Date(event.start_date);
+            return endDate >= now && event.is_active;
+          })
+          .sort((a: Event, b: Event) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+        setUpcomingEvents(upcoming.slice(0, 3)); // Show only first 3 upcoming events
+      } catch (err: any) {
+        console.error('Error fetching events:', err);
+        setEventsError(err.response?.data?.detail || 'Failed to load events');
+      } finally {
+        setEventsLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
 
   const handleBackgroundClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).tagName !== 'BUTTON' && 
@@ -209,24 +247,61 @@ export const Home = () => {
                 View all events →
               </Link>
             </div>
-            <div className="space-y-6">
-              {upcomingEvents.map((event) => (
-                <motion.div
-                  key={event.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  className="p-6 bg-white border border-gray-100 rounded-lg hover:border-gray-200 transition-colors"
-                >
-                  <h3 className="text-xl font-medium">{event.title}</h3>
-                  <div className="mt-2 flex items-center text-sm text-gray-500">
-                    <span>{event.date}</span>
-                    <span className="mx-2">•</span>
-                    <span>{event.location}</span>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+            {eventsError ? (
+              <div className="text-center text-red-600 py-8">
+                {eventsError}
+              </div>
+            ) : eventsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600" />
+              </div>
+            ) : upcomingEvents.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                No upcoming events at the moment
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {upcomingEvents.map((event) => (
+                  <motion.div
+                    key={event.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="p-6 bg-white border border-gray-100 rounded-lg hover:border-gray-200 transition-colors"
+                  >
+                    {event.cover_image && (
+                      <img
+                        src={event.cover_image}
+                        alt={event.title}
+                        className="w-full h-48 object-cover rounded-lg mb-4"
+                      />
+                    )}
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="text-xl font-medium">{event.title}</h3>
+                        <div className="mt-2 space-y-1 text-sm text-gray-500">
+                          <div className="flex items-center">
+                            <span>{formatDate(event.start_date)}</span>
+                            {event.end_date && (
+                              <>
+                                <span className="mx-2">-</span>
+                                <span>{formatDate(event.end_date)}</span>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center">
+                            <span>{event.venue}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <span className="px-3 py-1 text-sm font-medium text-gray-600 bg-gray-100 rounded-full">
+                        {event.category}
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>

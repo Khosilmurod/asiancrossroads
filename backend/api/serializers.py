@@ -2,6 +2,9 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import TeamMember, Event, Article, MailingListSubscriber, IncomingEmail
 from accounts.serializers import UserSerializer
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -14,16 +17,31 @@ class TeamMemberSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class EventSerializer(serializers.ModelSerializer):
-    created_by = UserSerializer(read_only=True)
+    spots_left = serializers.IntegerField(read_only=True)
+    is_full = serializers.BooleanField(read_only=True)
+    has_ended = serializers.BooleanField(read_only=True)
+    created_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
         fields = [
-            'id', 'title', 'description', 'date',
-            'location', 'image', 'created_by',
-            'is_published', 'created_at', 'updated_at'
+            'id', 'title', 'description', 'start_date', 'end_date',
+            'venue', 'registration_link', 'cover_image', 'category',
+            'capacity', 'current_registrations', 'spots_left', 'is_full',
+            'has_ended', 'created_by', 'created_by_name', 'is_active',
+            'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_by', 'created_at', 'updated_at']
+        read_only_fields = ['created_by', 'created_at', 'updated_at', 'current_registrations']
+
+    def get_created_by_name(self, obj):
+        if obj.created_by:
+            return f"{obj.created_by.first_name} {obj.created_by.last_name}"
+        return None
+
+    def validate(self, data):
+        if 'end_date' in data and data['end_date'] and data['start_date'] > data['end_date']:
+            raise serializers.ValidationError("End date must be after start date")
+        return data
 
 class ArticleSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)

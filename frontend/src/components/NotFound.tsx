@@ -5,7 +5,7 @@ export const NotFound: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
       <img
-        src="/logo.png"
+        src="/logo1.png"
         alt="Asian Crossroads Logo"
         className="w-24 h-24 mb-8"
       />
